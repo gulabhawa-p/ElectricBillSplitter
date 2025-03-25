@@ -1,44 +1,45 @@
-import { pgTable, text, serial, integer, numeric, date, timestamp } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, numeric, timestamp, jsonb } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
-// Users table (keeping the original schema)
+// Schema for user accounts (if needed in future)
 export const users = pgTable("users", {
   id: serial("id").primaryKey(),
   username: text("username").notNull().unique(),
   password: text("password").notNull(),
 });
 
-// Bill calculation schema
-export const billCalculations = pgTable("billCalculations", {
-  id: serial("id").primaryKey(),
-  calculationDate: timestamp("calculationDate").notNull().defaultNow(),
-  billingDate: date("billingDate").notNull(),
-  mainMeterReading: numeric("mainMeterReading").notNull(),
-  abcdMeterReading: numeric("abcdMeterReading").notNull(),
-  xyzMeterReading: numeric("xyzMeterReading").notNull(),
-  okbdMeterReading: numeric("okbdMeterReading").notNull(),
-  billAmount: numeric("billAmount").notNull(),
-  commonUsage: numeric("commonUsage").notNull(),
-  abcdShare: numeric("abcdShare").notNull(),
-  xyzShare: numeric("xyzShare").notNull(),
-  okbdShare: numeric("okbdShare").notNull(),
-  commonShare: numeric("commonShare").notNull(),
-  photoUrls: text("photoUrls"),
+export const insertUserSchema = createInsertSchema(users).pick({
+  username: true,
+  password: true,
 });
 
-// Photo uploads schema
-export const photos = pgTable("photos", {
+export type InsertUser = z.infer<typeof insertUserSchema>;
+export type User = typeof users.$inferSelect;
+
+// Schema for bill calculations
+export const calculations = pgTable("calculations", {
   id: serial("id").primaryKey(),
-  calculationId: integer("calculationId").notNull(),
-  photoUrl: text("photoUrl").notNull(),
-  uploadDate: timestamp("uploadDate").notNull().defaultNow(),
+  fromDate: timestamp("from_date").notNull(),
+  toDate: timestamp("to_date").notNull(),
+  mainMeterReading: numeric("main_meter_reading").notNull(),
+  abcdMeterReading: numeric("abcd_meter_reading").notNull(),
+  xyzMeterReading: numeric("xyz_meter_reading").notNull(),
+  okbdMeterReading: numeric("okbd_meter_reading").notNull(),
+  billAmount: numeric("bill_amount").notNull(),
+  commonUsage: numeric("common_usage").notNull(),
+  abcdShare: numeric("abcd_share").notNull(),
+  xyzShare: numeric("xyz_share").notNull(),
+  okbdShare: numeric("okbd_share").notNull(),
+  commonShare: numeric("common_share").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  meterImages: jsonb("meter_images").$type<MeterImages>(),
+  billImage: text("bill_image"),
 });
 
-// Insert schema for bill calculations
-export const insertBillCalculationSchema = createInsertSchema(billCalculations).omit({
+export const insertCalculationSchema = createInsertSchema(calculations).omit({
   id: true,
-  calculationDate: true,
+  createdAt: true,
   commonUsage: true,
   abcdShare: true,
   xyzShare: true,
@@ -46,36 +47,55 @@ export const insertBillCalculationSchema = createInsertSchema(billCalculations).
   commonShare: true,
 });
 
-// Insert schema for photos
-export const insertPhotoSchema = createInsertSchema(photos).omit({
-  id: true,
-  uploadDate: true,
+export const calculationFormSchema = z.object({
+  fromDate: z.date(),
+  toDate: z.date(),
+  mainMeterReading: z.number().positive("Main meter reading must be positive"),
+  abcdMeterReading: z.number().nonnegative("ABCD meter reading cannot be negative"),
+  xyzMeterReading: z.number().nonnegative("XYZ meter reading cannot be negative"),
+  okbdMeterReading: z.number().nonnegative("OKBD meter reading cannot be negative"),
+  billAmount: z.number().positive("Bill amount must be positive"),
+  meterImages: z.object({
+    mainMeter: z.string().optional(),
+    abcdMeter: z.string().optional(),
+    xyzMeter: z.string().optional(),
+    okbdMeter: z.string().optional()
+  }).optional(),
+  billImage: z.string().optional()
 });
 
-// Form validation schema
-export const billFormSchema = z.object({
-  billingDate: z.string().min(1, "Billing date is required"),
-  mainMeterReading: z.number().positive("Must be a positive number"),
-  abcdMeterReading: z.number().positive("Must be a positive number"),
-  xyzMeterReading: z.number().positive("Must be a positive number"),
-  okbdMeterReading: z.number().positive("Must be a positive number"),
-  billAmount: z.number().positive("Must be a positive number"),
-});
+export type MeterImages = {
+  mainMeter?: string;
+  abcdMeter?: string;
+  xyzMeter?: string;
+  okbdMeter?: string;
+};
 
-// Types
-export type InsertUser = z.infer<typeof insertUserSchema>;
-export type User = typeof users.$inferSelect;
+export type CalculationForm = z.infer<typeof calculationFormSchema>;
+export type InsertCalculation = z.infer<typeof insertCalculationSchema>;
+export type Calculation = typeof calculations.$inferSelect;
 
-export type InsertBillCalculation = z.infer<typeof insertBillCalculationSchema>;
-export type BillCalculation = typeof billCalculations.$inferSelect;
-
-export type InsertPhoto = z.infer<typeof insertPhotoSchema>;
-export type Photo = typeof photos.$inferSelect;
-
-export type BillFormData = z.infer<typeof billFormSchema>;
-
-// Keeping the original user schema
-export const insertUserSchema = createInsertSchema(users).pick({
-  username: true,
-  password: true,
-});
+// Schema for calculation results
+export type CalculationResult = {
+  mainMeter: number;
+  abcdMeter: number;
+  xyzMeter: number;
+  okbdMeter: number;
+  billAmount: number;
+  commonUsage: number;
+  abcdShare: number;
+  xyzShare: number;
+  okbdShare: number;
+  commonShare: number;
+  commonSharePerPerson: number;
+  abcdPercent: number;
+  xyzPercent: number;
+  okbdPercent: number;
+  commonPercent: number;
+  fromDate: Date;
+  toDate: Date;
+  id?: number;
+  createdAt?: Date;
+  meterImages?: MeterImages;
+  billImage?: string;
+};
