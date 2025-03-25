@@ -8,11 +8,20 @@ import { useToast } from "@/hooks/use-toast";
 import { CalculationResult } from "@shared/schema";
 import { formatCurrency, formatDateRange } from "@/lib/calculationUtils";
 
+// Extended type to include tenant names
+interface ExtendedCalculationResult extends CalculationResult {
+  tenantNames?: {
+    abcd: string;
+    xyz: string;
+    okbd: string;
+  };
+}
+
 export default function Results() {
   const [, navigate] = useLocation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const [result, setResult] = useState<CalculationResult | null>(null);
+  const [result, setResult] = useState<ExtendedCalculationResult | null>(null);
 
   useEffect(() => {
     // Retrieve the calculation result from sessionStorage
@@ -24,7 +33,7 @@ export default function Results() {
     }
     
     try {
-      const parsedResult = JSON.parse(storedResult) as CalculationResult;
+      const parsedResult = JSON.parse(storedResult) as ExtendedCalculationResult;
       setResult(parsedResult);
     } catch (error) {
       toast({
@@ -37,7 +46,7 @@ export default function Results() {
   }, [navigate, toast]);
 
   const saveMutation = useMutation({
-    mutationFn: async (data: CalculationResult) => {
+    mutationFn: async (data: ExtendedCalculationResult) => {
       const response = await apiRequest("POST", "/api/calculations", {
         fromDate: data.fromDate,
         toDate: data.toDate,
@@ -78,14 +87,18 @@ export default function Results() {
     try {
       // Build the share text
       const dateRange = formatDateRange(new Date(result.fromDate), new Date(result.toDate));
+      const abcdName = result.tenantNames?.abcd || "ABCD";
+      const xyzName = result.tenantNames?.xyz || "XYZ";
+      const okbdName = result.tenantNames?.okbd || "OKBD";
+      
       const shareText = `
 Electricity Bill Sharing (${dateRange})
 
 Total Bill: ₹${formatCurrency(result.billAmount)}
 
-ABCD: ₹${formatCurrency(result.abcdShare)} (${result.abcdPercent.toFixed(1)}%)
-XYZ: ₹${formatCurrency(result.xyzShare)} (${result.xyzPercent.toFixed(1)}%)
-OKBD: ₹${formatCurrency(result.okbdShare)} (${result.okbdPercent.toFixed(1)}%)
+${abcdName}: ₹${formatCurrency(result.abcdShare)} (${result.abcdPercent.toFixed(1)}%)
+${xyzName}: ₹${formatCurrency(result.xyzShare)} (${result.xyzPercent.toFixed(1)}%)
+${okbdName}: ₹${formatCurrency(result.okbdShare)} (${result.okbdPercent.toFixed(1)}%)
 
 Common: ₹${formatCurrency(result.commonShare)} (₹${formatCurrency(result.commonSharePerPerson)} each)
       `.trim();
@@ -127,6 +140,11 @@ Common: ₹${formatCurrency(result.commonShare)} (₹${formatCurrency(result.com
     );
   }
 
+  // Get tenant names with fallbacks
+  const abcdName = result.tenantNames?.abcd || "ABCD";
+  const xyzName = result.tenantNames?.xyz || "XYZ";
+  const okbdName = result.tenantNames?.okbd || "OKBD";
+
   return (
     <div className="p-4">
       <div className="bg-white rounded-lg shadow-sm p-4 mb-4">
@@ -146,13 +164,13 @@ Common: ₹${formatCurrency(result.commonShare)} (₹${formatCurrency(result.com
             <div className="text-sm">Main Meter:</div>
             <div className="text-sm font-medium text-right">{result.mainMeter} units</div>
             
-            <div className="text-sm">ABCD:</div>
+            <div className="text-sm">{abcdName}:</div>
             <div className="text-sm font-medium text-right">{result.abcdMeter} units</div>
             
-            <div className="text-sm">XYZ:</div>
+            <div className="text-sm">{xyzName}:</div>
             <div className="text-sm font-medium text-right">{result.xyzMeter} units</div>
             
-            <div className="text-sm">OKBD:</div>
+            <div className="text-sm">{okbdName}:</div>
             <div className="text-sm font-medium text-right">{result.okbdMeter} units</div>
             
             <div className="text-sm font-medium">Common Usage:</div>
@@ -172,7 +190,7 @@ Common: ₹${formatCurrency(result.commonShare)} (₹${formatCurrency(result.com
             <div className="bg-gray-50 p-3 rounded-lg">
               <div className="flex justify-between items-center">
                 <div>
-                  <h4 className="font-medium">ABCD</h4>
+                  <h4 className="font-medium">{abcdName}</h4>
                   <div className="text-xs text-gray-500">{result.abcdPercent.toFixed(1)}% of total consumption</div>
                 </div>
                 <div className="text-lg font-medium text-primary">₹{formatCurrency(result.abcdShare)}</div>
@@ -183,7 +201,7 @@ Common: ₹${formatCurrency(result.commonShare)} (₹${formatCurrency(result.com
             <div className="bg-gray-50 p-3 rounded-lg">
               <div className="flex justify-between items-center">
                 <div>
-                  <h4 className="font-medium">XYZ</h4>
+                  <h4 className="font-medium">{xyzName}</h4>
                   <div className="text-xs text-gray-500">{result.xyzPercent.toFixed(1)}% of total consumption</div>
                 </div>
                 <div className="text-lg font-medium text-primary">₹{formatCurrency(result.xyzShare)}</div>
@@ -194,7 +212,7 @@ Common: ₹${formatCurrency(result.commonShare)} (₹${formatCurrency(result.com
             <div className="bg-gray-50 p-3 rounded-lg">
               <div className="flex justify-between items-center">
                 <div>
-                  <h4 className="font-medium">OKBD</h4>
+                  <h4 className="font-medium">{okbdName}</h4>
                   <div className="text-xs text-gray-500">{result.okbdPercent.toFixed(1)}% of total consumption</div>
                 </div>
                 <div className="text-lg font-medium text-primary">₹{formatCurrency(result.okbdShare)}</div>

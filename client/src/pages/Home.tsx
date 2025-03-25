@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useLocation } from "wouter";
@@ -17,11 +17,39 @@ import { FileUpload } from "@/components/ui/file-upload";
 import { calculationFormSchema, CalculationForm } from "@shared/schema";
 import { calculateBillShares, getDefaultDates } from "@/lib/calculationUtils";
 import { useToast } from "@/hooks/use-toast";
+import { Edit2, Check } from "lucide-react";
 
 export default function Home() {
   const [_, navigate] = useLocation();
   const { toast } = useToast();
   const defaultDates = getDefaultDates();
+  
+  // State for tenant names
+  const [tenantNames, setTenantNames] = useState(() => {
+    // Try to load saved tenant names from localStorage
+    const savedNames = localStorage.getItem("tenantNames");
+    if (savedNames) {
+      try {
+        return JSON.parse(savedNames);
+      } catch (error) {
+        console.error("Failed to parse saved tenant names:", error);
+      }
+    }
+    // Default names if nothing is saved
+    return {
+      abcd: "ABCD",
+      xyz: "XYZ",
+      okbd: "OKBD"
+    };
+  });
+  
+  // State for editing mode
+  const [editingName, setEditingName] = useState<string | null>(null);
+  
+  // Save tenant names to localStorage whenever they change
+  useEffect(() => {
+    localStorage.setItem("tenantNames", JSON.stringify(tenantNames));
+  }, [tenantNames]);
   
   // Initialize form with default values
   const form = useForm<CalculationForm>({
@@ -43,8 +71,14 @@ export default function Home() {
       // Calculate bill shares
       const result = calculateBillShares(data);
       
+      // Add tenant names to the result
+      const resultWithNames = {
+        ...result,
+        tenantNames
+      };
+      
       // Store the result in sessionStorage for the results page
-      sessionStorage.setItem("calculationResult", JSON.stringify(result));
+      sessionStorage.setItem("calculationResult", JSON.stringify(resultWithNames));
       
       // Navigate to results page
       navigate("/results");
@@ -59,6 +93,46 @@ export default function Home() {
 
   return (
     <div className="p-4">
+      {/* Tenant Names Configuration */}
+      <div className="bg-white rounded-lg shadow-sm p-4 mb-4">
+        <h2 className="text-lg font-medium mb-2">Tenant Names</h2>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {Object.entries(tenantNames).map(([key, name]) => (
+            <div key={key} className="flex items-center">
+              {editingName === key ? (
+                <div className="flex w-full">
+                  <Input
+                    value={name}
+                    onChange={(e) => setTenantNames({...tenantNames, [key]: e.target.value as string})}
+                    className="flex-1"
+                    autoFocus
+                  />
+                  <Button 
+                    variant="ghost" 
+                    size="icon"
+                    onClick={() => setEditingName(null)}
+                    className="ml-1"
+                  >
+                    <Check className="h-4 w-4" />
+                  </Button>
+                </div>
+              ) : (
+                <div className="flex w-full items-center justify-between border rounded-md px-3 py-2">
+                  <span>{String(name)}</span>
+                  <Button 
+                    variant="ghost" 
+                    size="icon"
+                    onClick={() => setEditingName(key)}
+                  >
+                    <Edit2 className="h-4 w-4" />
+                  </Button>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+      
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
           {/* Date Picker Section */}
@@ -138,7 +212,7 @@ export default function Home() {
               name="abcdMeterReading"
               render={({ field }) => (
                 <FormItem className="mb-4">
-                  <FormLabel className="text-sm text-gray-600">ABCD Sub-Meter Reading</FormLabel>
+                  <FormLabel className="text-sm text-gray-600">{tenantNames.abcd} Sub-Meter Reading</FormLabel>
                   <div className="flex items-center">
                     <FormControl>
                       <Input
@@ -174,7 +248,7 @@ export default function Home() {
               name="xyzMeterReading"
               render={({ field }) => (
                 <FormItem className="mb-4">
-                  <FormLabel className="text-sm text-gray-600">XYZ Sub-Meter Reading</FormLabel>
+                  <FormLabel className="text-sm text-gray-600">{tenantNames.xyz} Sub-Meter Reading</FormLabel>
                   <div className="flex items-center">
                     <FormControl>
                       <Input
@@ -210,7 +284,7 @@ export default function Home() {
               name="okbdMeterReading"
               render={({ field }) => (
                 <FormItem className="mb-4">
-                  <FormLabel className="text-sm text-gray-600">OKBD Sub-Meter Reading</FormLabel>
+                  <FormLabel className="text-sm text-gray-600">{tenantNames.okbd} Sub-Meter Reading</FormLabel>
                   <div className="flex items-center">
                     <FormControl>
                       <Input

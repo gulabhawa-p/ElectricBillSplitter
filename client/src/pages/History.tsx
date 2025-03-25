@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
@@ -7,6 +7,25 @@ import { formatCurrency, formatDateRange } from "@/lib/calculationUtils";
 import { Skeleton } from "@/components/ui/skeleton";
 
 export default function History() {
+  // State for tenant names
+  const [tenantNames, setTenantNames] = useState({
+    abcd: "ABCD",
+    xyz: "XYZ",
+    okbd: "OKBD"
+  });
+  
+  // Load tenant names from localStorage on component mount
+  useEffect(() => {
+    const savedNames = localStorage.getItem("tenantNames");
+    if (savedNames) {
+      try {
+        setTenantNames(JSON.parse(savedNames));
+      } catch (error) {
+        console.error("Failed to parse saved tenant names:", error);
+      }
+    }
+  }, []);
+
   const { data: calculations, isLoading, error } = useQuery<Calculation[]>({ 
     queryKey: ["/api/calculations"] 
   });
@@ -68,9 +87,9 @@ export default function History() {
                   </div>
                 </div>
                 <div className="grid grid-cols-3 gap-2 text-sm">
-                  <div>ABCD: ₹{formatCurrency(Number(calculation.abcdShare))}</div>
-                  <div>XYZ: ₹{formatCurrency(Number(calculation.xyzShare))}</div>
-                  <div>OKBD: ₹{formatCurrency(Number(calculation.okbdShare))}</div>
+                  <div>{tenantNames.abcd}: ₹{formatCurrency(Number(calculation.abcdShare))}</div>
+                  <div>{tenantNames.xyz}: ₹{formatCurrency(Number(calculation.xyzShare))}</div>
+                  <div>{tenantNames.okbd}: ₹{formatCurrency(Number(calculation.okbdShare))}</div>
                 </div>
                 <div className="mt-2 text-xs text-gray-500">
                   Common: ₹{formatCurrency(Number(calculation.commonShare))} (₹{formatCurrency(Number(calculation.commonShare) / 3)} each)
