@@ -1,4 +1,12 @@
-import { pgTable, text, serial, integer, numeric, timestamp, jsonb } from "drizzle-orm/pg-core";
+import {
+  pgTable,
+  text,
+  serial,
+  integer,
+  numeric,
+  timestamp,
+  jsonb,
+} from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -51,17 +59,25 @@ export const calculationFormSchema = z.object({
   fromDate: z.date(),
   toDate: z.date(),
   mainMeterReading: z.number().positive("Main meter reading must be positive"),
-  abcdMeterReading: z.number().nonnegative("ABCD meter reading cannot be negative"),
-  xyzMeterReading: z.number().nonnegative("XYZ meter reading cannot be negative"),
-  okbdMeterReading: z.number().nonnegative("OKBD meter reading cannot be negative"),
+  abcdMeterReading: z
+    .number()
+    .nonnegative("ABCD meter reading cannot be negative"),
+  xyzMeterReading: z
+    .number()
+    .nonnegative("XYZ meter reading cannot be negative"),
+  okbdMeterReading: z
+    .number()
+    .nonnegative("OKBD meter reading cannot be negative"),
   billAmount: z.number().positive("Bill amount must be positive"),
-  meterImages: z.object({
-    mainMeter: z.string().optional(),
-    abcdMeter: z.string().optional(),
-    xyzMeter: z.string().optional(),
-    okbdMeter: z.string().optional()
-  }).optional(),
-  billImage: z.string().optional()
+  meterImages: z
+    .object({
+      mainMeter: z.string().optional(),
+      abcdMeter: z.string().optional(),
+      xyzMeter: z.string().optional(),
+      okbdMeter: z.string().optional(),
+    })
+    .optional(),
+  billImage: z.string().optional(),
 });
 
 export type MeterImages = {
